@@ -2,7 +2,7 @@ name: BTC News Scraper
 
 on:
   schedule:
-    # Jalankan setiap 30 menit. Gunakan https://crontab.guru untuk bantuan.
+    # Jalankan setiap 30 menit.
     - cron: '*/30 * * * *'
   workflow_dispatch: # Memungkinkan menjalankan manual dari halaman Actions
 
