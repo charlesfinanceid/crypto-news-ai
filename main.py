@@ -3,6 +3,7 @@ import feedparser
 import google.generativeai as genai
 import os
 import json
+import time
 
 # --- KONFIGURASI ---
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -70,7 +71,6 @@ def send_telegram_message(message):
             requests.post(url, data=payload, timeout=10)
             # Jeda kecil untuk menghindari rate limit
             if i < len(parts) - 1:
-                import time
                 time.sleep(1)
         except requests.exceptions.RequestException as e:
             print(f"Error mengirim bagian {i+1}: {e}")
@@ -179,8 +179,8 @@ Berikan logika penularannya]
 
         # 3. Format pesan dan kirim ke Telegram
         final_message = f"📰 **Analisis Institusional (Cointelegraph)**\n\n"
-final_message += f"🔗 [{article_title}]({article_link})\n\n"
-final_message += f"📝 *Laporan Analisis:*\n{summary_text}"
+        final_message += f"🔗 [{article_title}]({article_link})\n\n"
+        final_message += f"📝 *Laporan Analisis:*\n{summary_text}"
         
         send_telegram_message(final_message)
         print("Proses selesai.")
