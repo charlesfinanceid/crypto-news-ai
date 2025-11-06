@@ -18,7 +18,7 @@ if not all([TELEGRAM_BOT_TOKEN, CHAT_ID, GEMINI_API_KEY]):
 
 # Inisialisasi Gemini AI
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('models/gemini-pro')
 
 # Fungsi untuk mengirim pesan ke Telegram
 def send_telegram_message(message):
