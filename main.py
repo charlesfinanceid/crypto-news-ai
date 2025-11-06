@@ -138,9 +138,7 @@ Berikan logika penularannya]
         print("Analisis institusional berhasil dibuat.")
 
         # 3. Format pesan dan kirim ke Telegram
-        final_message = f"📰 **Analisis Institusional (Cointelegraph)**\n\n"
-        final_message += f"🔗 [{article_title}]({article_link})\n\n"
-        final_message += f"📝 *Laporan Analisis:*\n{summary_text}"
+        final_message = "TES PESAN PENDEK. JIKA INI MUNCUL, BOT AMAN."
         
         send_telegram_message(final_message)
         print("Proses selesai.")
