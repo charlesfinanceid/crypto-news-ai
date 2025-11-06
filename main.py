@@ -1,35 +1,31 @@
 import os
 
-print("🕵️‍♂️ MULAI Misi SPY: Mengintip Brankas Rahasia GitHub...")
+print("🩺 TERAPI GITHUB: Memeriksa ingatan brankas rahasia...")
 print("-" * 60)
 
-# Daftar semua kunci yang kita harapkan ada
-expected_keys = [
-    "TELEGRAM_BOT_TOKEN",
-    "CHAT_ID",
-    "GEMINI_API_KEY",
-    "SUPABASE_URL",
-    "SUPABASE_KEY"
-]
+# Cetak semua environment variable yang ada
+all_env_vars = dict(os.environ)
 
-all_found = True
+# Filter untuk hanya menampilkan yang kita pedulikan
+keys_to_check = ["TELEGRAM_BOT_TOKEN", "CHAT_ID", "GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
 
-for key in expected_keys:
-    # Ambil nilai dari environment
-    value = os.environ.get(key)
-    
-    # Cek apakah ada dan tidak kosong
-    if value is None or value.strip() == "":
-        print(f"❌ SPY REPORT: Kunci '{key}' HILANG atau KOSONG!")
-        print(f"   -> Nilai yang ditemukan: '{value}'")
-        all_found = False
+found_keys = {}
+missing_keys = []
+
+for key in keys_to_check:
+    value = all_env_vars.get(key)
+    if value:
+        found_keys[key] = value
+        print(f"✅ DITEMUKAN: {key}")
+        print(f"   -> Nilai (20 karakter pertama): '{value[:20]}...'")
     else:
-        print(f"✅ SPY REPORT: Kunci '{key}' DITEMUKAN.")
-        print(f"   -> Nilai (10 karakter pertama): '{value[:10]}...'")
+        missing_keys.append(key)
+        print(f"❌ HILANG: {key}")
 
 print("-" * 60)
 
-if all_found:
-    print("🎉 SPY REPORT: SEMUA KUNCI AMAN! Script utama seharusnya bisa berjalan.")
+if not missing_keys:
+    print("🎉 DIAGNOSIS: Semua kunci ditemukan di ingatan GitHub!")
 else:
-    print("🚨 SPY REPORT: MASALAH DITEMUKAN! Ada kunci yang hilang. Tidak bisa lanjut.")
+    print("🚨 DIAGNOSIS: Masih ada kunci yang hilang dari ingatan GitHub!")
+    print(f"Kunci yang hilang: {', '.join(missing_keys)}")
