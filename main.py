@@ -1,18 +1,20 @@
 import requests
-from bs4 import BeautifulSoup
+import feedparser
 import google.generativeai as genai
 import os
 import json
 
-# --- KONFIGURASI (Diambil dari Screts GitHub) ---
+# --- KONFIGURASI ---
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-# -----------------------------------------
+# RSS FEED UNTUK BERITA BITCOIN DARI COINTELEGRAPH
+RSS_FEED_URL = "https://cointelegraph.com/rss/tag/bitcoin"
+# -------------------------
 
-# Cek apakah semua environment variable sudah terisi
+# Cek Environment Variable
 if not all([TELEGRAM_BOT_TOKEN, CHAT_ID, GEMINI_API_KEY]):
-    raise ValueError("Error: Satu atau lebih Environment Variable (TOKEN/CHAT_ID/API_KEY) tidak ditemukan. Silakan periksa Settings > Secrets di GitHub.")
+    raise ValueError("Error: Environment Variable tidak ditemukan.")
 
 # Inisialisasi Gemini AI
 genai.configure(api_key=GEMINI_API_KEY)
@@ -35,74 +37,37 @@ def send_telegram_message(message):
 
 # Fungsi utama
 def main():
-    print("Memulai proses scraping dan summarizing...")
+    print("Memulai proses membaca RSS Feed...")
     try:
-        # --- PERUBAHAN UTAMA: MENGGUNAKAN SESSION ---
-        with requests.Session() as s:
-            s.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Dnt': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Cache-Control': 'max-age=0',
-            })
+        # 1. Ambil feed dari RSS
+        feed = feedparser.parse(RSS_FEED_URL)
+        
+        # Ambil artikel pertama (terbaru)
+        latest_entry = feed.entries[0]
+        article_title = latest_entry.title
+        article_link = latest_entry.link
+        article_content = latest_entry.summary # RSS sudah menyediakan ringkasan
 
-            # 1. Scraping halaman utama berita
-            news_url = "https://www.cryptocraft.com/news"
-            # Gunakan 's.get' bukan 'requests.get'
-            response = s.get(news_url, timeout=15)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+        print(f"Berita ditemukan: {article_title}")
 
-            # 2. Mencari artikel terbaru
-            first_article_container = soup.find('div', class_='jeg_postblock_content')
-            if not first_article_container:
-                raise Exception("Tidak bisa menemukan container artikel. Mungkin struktur web sudah berubah.")
-            
-            first_article = first_article_container.find('a')
-            if not first_article:
-                raise Exception("Tidak bisa menemukan link artikel pertama.")
+        # 2. Meringkas dengan Gemini AI (membuat ringkasan yang lebih baik)
+        prompt = f"Tolong ringkas artikel berikut dalam Bahasa Indonesia dengan gaya yang santai dan mudah dimengerti. Berikan 3 poin penting. Judul: {article_title}. Isi: {article_content}"
+        summary_response = model.generate_content(prompt)
+        summary_text = summary_response.text
+        print("Ringkasan berhasil dibuat.")
 
-            article_title = first_article.get_text(strip=True)
-            article_link = first_article['href']
-            print(f"Berita ditemukan: {article_title}")
-
-            # 3. Mengambil isi artikel lengkap
-            # Gunakan 's.get' juga di sini agar session-nya konsisten
-            article_response = s.get(article_link, timeout=15)
-            article_response.raise_for_status()
-            article_soup = BeautifulSoup(article_response.content, 'html.parser')
-            
-            content_div = article_soup.find('div', class_='content-inner')
-            if not content_div:
-                raise Exception("Tidak bisa menemukan isi artikel. Mungkin struktur web sudah berubah.")
-            
-            article_content = content_div.get_text(strip=True)
-
-            # 4. Meringkas dengan Gemini AI
-            prompt = f"Tolong ringkas artikel berikut dalam Bahasa Indonesia dengan gaya yang santai dan mudah dimengerti. Berikan 3 poin penting. Judul: {article_title}. Isi: {article_content}"
-            summary_response = model.generate_content(prompt)
-            summary_text = summary_response.text
-            print("Ringkasan berhasil dibuat.")
-
-            # 5. Format pesan dan kirim ke Telegram
-            final_message = f"📰 **Berita Terbaru dari CryptoCraft**\n\n"
-            final_message += f"🔗 [{article_title}]({article_link})\n\n"
-            final_message += f"📝 *Ringkasan:*\n{summary_text}"
-            
-            send_telegram_message(final_message)
-            print("Proses selesai.")
+        # 3. Format pesan dan kirim ke Telegram
+        final_message = f"📰 **Berita Bitcoin Terbaru (Cointelegraph)**\n\n"
+        final_message += f"🔗 [{article_title}]({article_link})\n\n"
+        final_message += f"📝 *Ringkasan:*\n{summary_text}"
+        
+        send_telegram_message(final_message)
+        print("Proses selesai.")
         
     except Exception as e:
         error_message = f"Error terjadi: {e}"
         print(error_message)
-        send_telegram_message(f"Maaf, ada error saat mengambil berita: {e}")
+        send_telegram_message(f"Maaf, ada error: {e}")
 
 if __name__ == "__main__":
     main()
