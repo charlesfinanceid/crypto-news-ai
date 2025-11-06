@@ -19,21 +19,61 @@ if not all([TELEGRAM_BOT_TOKEN, CHAT_ID, GEMINI_API_KEY]):
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
-# Fungsi untuk mengirim pesan ke Telegram
+# Fungsi untuk mengirim pesan panjang ke Telegram (dipotong jika perlu)
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    # --- PERUBAHAN DIAGONSTIK: NONAKTIFKAN MARKDOWN ---
-    payload = {
-        'chat_id': CHAT_ID,
-        'text': message,
-        # 'parse_mode': 'Markdown', # Baris ini kita nonaktifkan dulu
-        'disable_web_page_preview': False
-    }
-    try:
-        requests.post(url, data=payload, timeout=10)
-        print("Pesan berhasil dikirim ke Telegram (mode teks biasa).")
-    except requests.exceptions.RequestException as e:
-        print(f"Error mengirim pesan ke Telegram: {e}")
+    
+    # Batas aman karakter Telegram
+    MAX_MESSAGE_LENGTH = 4000
+    
+    # Jika pesan cukup pendek, kirim langsung
+    if len(message) <= MAX_MESSAGE_LENGTH:
+        payload = {
+            'chat_id': CHAT_ID,
+            'text': message,
+            'parse_mode': 'Markdown',
+            'disable_web_page_preview': False
+        }
+        try:
+            requests.post(url, data=payload, timeout=10)
+            print("Pesan berhasil dikirim ke Telegram.")
+        except requests.exceptions.RequestException as e:
+            print(f"Error mengirim pesan ke Telegram: {e}")
+        return
+
+    # Jika pesan terlalu panjang, potong dan kirim bertahap
+    print(f"Pesan terlalu panjang ({len(message)} karakter). Memotong menjadi beberapa bagian...")
+    
+    parts = []
+    while len(message) > 0:
+        if len(message) > MAX_MESSAGE_LENGTH:
+            part = message[:MAX_MESSAGE_LENGTH]
+            # Cari titik terakhir di bagian untuk memotong di kalimat yang wajar
+            last_period_index = part.rfind('.')
+            if last_period_index > MAX_MESSAGE_LENGTH * 0.8: # Potong di titik jika memungkinkan
+                part = part[:last_period_index + 1]
+            parts.append(part)
+            message = message[len(part):].lstrip()
+        else:
+            parts.append(message)
+            break
+
+    for i, part in enumerate(parts):
+        print(f"Mengirim bagian {i+1}/{len(parts)}...")
+        payload = {
+            'chat_id': CHAT_ID,
+            'text': f"📄 ({i+1}/{len(parts)})\n\n{part}",
+            'parse_mode': 'Markdown',
+            'disable_web_page_preview': False
+        }
+        try:
+            requests.post(url, data=payload, timeout=10)
+            # Jeda kecil untuk menghindari rate limit
+            if i < len(parts) - 1:
+                import time
+                time.sleep(1)
+        except requests.exceptions.RequestException as e:
+            print(f"Error mengirim bagian {i+1}: {e}")
 
 # Fungsi utama
 def main():
@@ -138,7 +178,9 @@ Berikan logika penularannya]
         print("Analisis institusional berhasil dibuat.")
 
         # 3. Format pesan dan kirim ke Telegram
-        final_message = "TES PESAN PENDEK. JIKA INI MUNCUL, BOT AMAN."
+        final_message = f"📰 **Analisis Institusional (Cointelegraph)**\n\n"
+final_message += f"🔗 [{article_title}]({article_link})\n\n"
+final_message += f"📝 *Laporan Analisis:*\n{summary_text}"
         
         send_telegram_message(final_message)
         print("Proses selesai.")
