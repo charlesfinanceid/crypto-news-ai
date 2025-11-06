@@ -37,65 +37,67 @@ def send_telegram_message(message):
 def main():
     print("Memulai proses scraping dan summarizing...")
     try:
-        # 1. Scraping halaman utama berita
-        news_url = "https://www.cryptocraft.com/news"
-        # --- HEADERS BARU UNTUK MENYAMAR ---
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Dnt': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Cache-Control': 'max-age=0',
-        }
-        # ------------------------------------
-        response = requests.get(news_url, headers=headers, timeout=15)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'html.parser')
+        # --- PERUBAHAN UTAMA: MENGGUNAKAN SESSION ---
+        with requests.Session() as s:
+            s.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Dnt': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': 'max-age=0',
+            })
 
-        # 2. Mencari artikel terbaru
-        first_article_container = soup.find('div', class_='jeg_postblock_content')
-        if not first_article_container:
-            raise Exception("Tidak bisa menemukan container artikel. Mungkin struktur web sudah berubah.")
-        
-        first_article = first_article_container.find('a')
-        if not first_article:
-            raise Exception("Tidak bisa menemukan link artikel pertama.")
+            # 1. Scraping halaman utama berita
+            news_url = "https://www.cryptocraft.com/news"
+            # Gunakan 's.get' bukan 'requests.get'
+            response = s.get(news_url, timeout=15)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
 
-        article_title = first_article.get_text(strip=True)
-        article_link = first_article['href']
-        print(f"Berita ditemukan: {article_title}")
+            # 2. Mencari artikel terbaru
+            first_article_container = soup.find('div', class_='jeg_postblock_content')
+            if not first_article_container:
+                raise Exception("Tidak bisa menemukan container artikel. Mungkin struktur web sudah berubah.")
+            
+            first_article = first_article_container.find('a')
+            if not first_article:
+                raise Exception("Tidak bisa menemukan link artikel pertama.")
 
-        # 3. Mengambil isi artikel lengkap
-        article_response = requests.get(article_link, headers=headers, timeout=15)
-        article_response.raise_for_status()
-        article_soup = BeautifulSoup(article_response.content, 'html.parser')
-        
-        content_div = article_soup.find('div', class_='content-inner')
-        if not content_div:
-            raise Exception("Tidak bisa menemukan isi artikel. Mungkin struktur web sudah berubah.")
-        
-        article_content = content_div.get_text(strip=True)
+            article_title = first_article.get_text(strip=True)
+            article_link = first_article['href']
+            print(f"Berita ditemukan: {article_title}")
 
-        # 4. Meringkas dengan Gemini AI
-        prompt = f"Tolong ringkas artikel berikut dalam Bahasa Indonesia dengan gaya yang santai dan mudah dimengerti. Berikan 3 poin penting. Judul: {article_title}. Isi: {article_content}"
-        summary_response = model.generate_content(prompt)
-        summary_text = summary_response.text
-        print("Ringkasan berhasil dibuat.")
+            # 3. Mengambil isi artikel lengkap
+            # Gunakan 's.get' juga di sini agar session-nya konsisten
+            article_response = s.get(article_link, timeout=15)
+            article_response.raise_for_status()
+            article_soup = BeautifulSoup(article_response.content, 'html.parser')
+            
+            content_div = article_soup.find('div', class_='content-inner')
+            if not content_div:
+                raise Exception("Tidak bisa menemukan isi artikel. Mungkin struktur web sudah berubah.")
+            
+            article_content = content_div.get_text(strip=True)
 
-        # 5. Format pesan dan kirim ke Telegram
-        final_message = f"📰 **Berita Terbaru dari CryptoCraft**\n\n"
-        final_message += f"🔗 [{article_title}]({article_link})\n\n"
-        final_message += f"📝 *Ringkasan:*\n{summary_text}"
-        
-        send_telegram_message(final_message)
-        print("Proses selesai.")
+            # 4. Meringkas dengan Gemini AI
+            prompt = f"Tolong ringkas artikel berikut dalam Bahasa Indonesia dengan gaya yang santai dan mudah dimengerti. Berikan 3 poin penting. Judul: {article_title}. Isi: {article_content}"
+            summary_response = model.generate_content(prompt)
+            summary_text = summary_response.text
+            print("Ringkasan berhasil dibuat.")
+
+            # 5. Format pesan dan kirim ke Telegram
+            final_message = f"📰 **Berita Terbaru dari CryptoCraft**\n\n"
+            final_message += f"🔗 [{article_title}]({article_link})\n\n"
+            final_message += f"📝 *Ringkasan:*\n{summary_text}"
+            
+            send_telegram_message(final_message)
+            print("Proses selesai.")
         
     except Exception as e:
         error_message = f"Error terjadi: {e}"
