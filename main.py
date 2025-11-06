@@ -51,7 +51,7 @@ def main():
         print(f"Berita ditemukan: {article_title}")
 
         # 2. Meringkas dengan Gemini AI
-        prompt = f"Bertindak sebagai seorang analis keuangan profesional. Buatlah analisis singkat dari artikel berikut dalam Bahasa Indonesia. Fokus pada sentimen pasar (positif/negatif/netral), implikasi potensial bagi harga Bitcoin, dan faktor kunci yang disebutkan. Gunakan gaya bahasa yang formal, objektif, dan padat. Sajikan dalam 3 poin utama. Judul: {article_title}. Isi: {article_content}"
+        prompt = f"Analisis artikel berikut sebagai seorang quant analyst. Sajikan output EKSTREM RINGKAS, TANPA kalimat pembuka atau penutup. Hindari kata-kata pengisi (seperti 'artikel ini membahas', 'menurut sumber', dll). Gunakan format data berikut: \n\nSentimen: [Positif/Negatif/Netral]\nKatalisator: [Apa penyebab utama berita, 1 kalimat]\nImplikasi: [Dampak potensial pada harga BTC, 1 kalimat]\nLevel Watch: [Level harga penting yang disebutkan atau implisit, jika ada]\n\nJudul: {article_title}\nIsi: {article_content}"
         summary_response = model.generate_content(prompt)
         summary_text = summary_response.text
         print("Ringkasan berhasil dibuat.")
