@@ -22,15 +22,16 @@ model = genai.GenerativeModel('models/gemini-2.5-flash')
 # Fungsi untuk mengirim pesan ke Telegram
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    # --- PERUBAHAN DIAGONSTIK: NONAKTIFKAN MARKDOWN ---
     payload = {
         'chat_id': CHAT_ID,
         'text': message,
-        'parse_mode': 'Markdown',
+        # 'parse_mode': 'Markdown', # Baris ini kita nonaktifkan dulu
         'disable_web_page_preview': False
     }
     try:
         requests.post(url, data=payload, timeout=10)
-        print("Pesan berhasil dikirim ke Telegram.")
+        print("Pesan berhasil dikirim ke Telegram (mode teks biasa).")
     except requests.exceptions.RequestException as e:
         print(f"Error mengirim pesan ke Telegram: {e}")
 
